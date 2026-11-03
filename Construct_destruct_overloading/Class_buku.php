@@ -6,14 +6,10 @@ class Buku {
         public string $penulis,
         public string $tahun
     ) {}
-    // public function __set(string $key, mixed $value): void {
-    //     $diizinkan = ['genre', 'Theme', 'Latar'];
-        // lanjut entar yang ini
-    }
     public function tampilinfo(): string {
         return "Judul Buku: $this->judul</br> Nama penulis: $this->penulis</br> Tahun terbit: $this->tahun</br>";
     }
-     public function __destruct() {echo "Lanjut ke Bab 1 Habits </br>";}
+    public function __destruct() {echo "Lanjut ke Bab 1 Habits </br>";}
 }
 
 $books = new Buku('Atomic Habits', 'Yudhs', '2026');
