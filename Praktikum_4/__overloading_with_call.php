@@ -9,7 +9,6 @@ class LaporanMahasiswa {
     }
 }
 
-
 // --- PENGUJIAN LATIHAN MANDIRI NO. 5 ---
 
 $laporan = new LaporanMahasiswa('Alya');

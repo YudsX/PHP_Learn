@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $data['nim'], $data['nama'], $data['fakultas'], $data['prodi'],
                 $data['asalSekolah'], $semester, $data['hobi'], $data['agama']
             );
-            // CRUD bekerja pada object Mahasiswa, bukan property satu per satu.
+            // CRUD bekerja pada object Mahasiswa.
             $berhasil = $aksi === 'tambah'
                 ? $repo->tambah($m)
                 : $repo->ubah($nimLama, $m);
@@ -65,11 +65,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 if (!isset($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(32));
-$edit = $repo->cari((string)($_GET['edit'] ?? ''));
+
+// Menggunakan getter untuk mendapatkan data pada form Edit
+$editObj = $repo->cari((string)($_GET['edit'] ?? ''));
+$editData = [
+    'nim' => $editObj?->getNim() ?? '',
+    'nama' => $editObj?->getNama() ?? '',
+    'fakultas' => $editObj?->getFakultas() ?? '',
+    'prodi' => $editObj?->getProdi() ?? '',
+    'asalSekolah' => $editObj?->getAsalSekolah() ?? '',
+    'semester' => $editObj?->getSemester() ?? '',
+    'hobi' => $editObj?->getHobi() ?? '',
+    'agama' => $editObj?->getAgama() ?? ''
+];
 ?>
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Praktikum PBO 4 - CRUD Mahasiswa</title>
+<title>Praktikum PBO 5 - Enkapsulasi CRUD Mahasiswa</title>
 <style>
     *{box-sizing:border-box}body{font-family:system-ui,Arial,sans-serif;background:#f1f5f9;color:#15324d;margin:0}
     main{max-width:1120px;margin:36px auto;padding:0 18px}h1{margin-bottom:4px}
@@ -86,18 +98,19 @@ $edit = $repo->cari((string)($_GET['edit'] ?? ''));
 <body>
 <main>
 
-<h1>Data Mahasiswa</h1><p class="muted">PBO Pertemuan 4: Constructor, Destructor, Overloading + CRUD Array/Session</p>
+<h1>Data Mahasiswa</h1><p class="muted">PBO Pertemuan 5: Enkapsulasi (Getter, Setter, & Validasi Private Property)</p>
 <?php if ($pesan): ?><div class="notice"><?= aman($pesan) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="notice err"><?= aman($error) ?></div><?php endif; ?>
-<section class="panel"><h2><?= $edit ? 'Edit' : 'Tambah' ?> Data Mahasiswa</h2>
+<section class="panel"><h2><?= $editObj ? 'Edit' : 'Tambah' ?> Data Mahasiswa</h2>
 
 <form method="post"><input type="hidden" name="csrf" value="<?= aman($_SESSION['csrf']) ?>">
-<input type="hidden" name="aksi" value="<?= $edit ? 'ubah' : 'tambah' ?>">
-<input type="hidden" name="nim_lama" value="<?= aman($edit?->nim ?? '') ?>">
+<input type="hidden" name="aksi" value="<?= $editObj ? 'ubah' : 'tambah' ?>">
+<!-- NIM lama diset read-only / tidak berubah saat edit agar key session konsisten -->
+<input type="hidden" name="nim_lama" value="<?= aman($editData['nim']) ?>">
 <div class="grid">
 
 <?php foreach ($keys as $key => $label):
-    $value = $edit ? ($edit->$key ?? '') : '';
+    $value = $editData[$key] ?? '';
 ?>
 <label><?= aman($label) ?>
 <?php if ($key === 'agama'): ?>
@@ -105,45 +118,55 @@ $edit = $repo->cari((string)($_GET['edit'] ?? ''));
 <?php foreach ($agamaList as $agama): ?>
 <option value="<?= aman($agama) ?>" <?= $value === $agama ? 'selected' : '' ?>><?= aman($agama) ?></option>
 <?php endforeach; ?></select>
+<?php elseif ($key === 'nim' && $editObj): ?>
+<!-- NIM bersifat read-only saat edit -->
+<input name="nim" value="<?= aman($value) ?>" readonly style="background:#e9ecef; cursor:not-allowed;" title="NIM tidak dapat diubah">
 <?php else: ?>
 <input name="<?= aman($key) ?>" value="<?= aman($value) ?>"
 <?= $key === 'semester' ? 'type="number" min="1" max="14"' : 'type="text"' ?>
 <?= $key !== 'hobi' ? 'required' : '' ?>>
 <?php endif; ?></label>
 <?php endforeach; ?></div>
-<p><button><?= $edit ? 'Simpan Perubahan' : 'Tambah Mahasiswa' ?></button>
-<?php if ($edit): ?><a class="btn" href="index.php">Batal</a><?php endif; ?></p>
+<p><button><?= $editObj ? 'Simpan Perubahan' : 'Tambah Mahasiswa' ?></button>
+<?php if ($editObj): ?><a class="btn" href="index.php">Batal</a><?php endif; ?></p>
 </form></section>
-    <section class="panel"><h2>Daftar Mahasiswa (<?= count($repo->semua()) ?>)</h2><div class="scroll"><table>
+    
+<section class="panel"><h2>Daftar Mahasiswa (<?= count($repo->semua()) ?>)</h2><div class="scroll"><table>
     <thead>
         <tr><?php foreach ($keys as $label): ?>
-            <th><?= aman($label) ?>
-            </th><?php endforeach; ?>
+            <th><?= aman($label) ?></th>
+        <?php endforeach; ?>
             <th>Aksi</th>
         </tr>
     </thead>
 <tbody>
 <?php foreach ($repo->semua() as $m): ?>
-<tr><?php foreach (array_keys($keys) as $key): ?>
-        <td><?= aman($m->$key ?? '') ?></td>
-    <?php endforeach; ?>
+<tr>
+    <!-- Menggunakan getter untuk membaca property private (Enkapsulasi Pertemuan 5) -->
+    <td><?= aman($m->getNim()) ?></td>
+    <td><?= aman($m->getNama()) ?></td>
+    <td><?= aman($m->getFakultas()) ?></td>
+    <td><?= aman($m->getProdi()) ?></td>
+    <td><?= aman($m->getAsalSekolah()) ?></td>
+    <td><?= aman((string)$m->getSemester()) ?></td>
+    <td><?= aman($m->getHobi()) ?></td>
+    <td><?= aman($m->getAgama()) ?></td>
     <td>
         <div class="actions">
-            <a class="btn" href="?edit=<?= urlencode($m->nim) ?>">Edit</a>
+            <a class="btn" href="?edit=<?= urlencode($m->getNim()) ?>">Edit</a>
             <form method="post" onsubmit="return confirm('Hapus data ini?')">
                 <input type="hidden" name="csrf" value="<?= aman($_SESSION['csrf']) ?>">
-                <input type="hidden" name="aksi" value="hapus"><input type="hidden" name="nim" value="<?= aman($m->nim) ?>">
+                <input type="hidden" name="aksi" value="hapus">
+                <input type="hidden" name="nim" value="<?= aman($m->getNim()) ?>">
                 <button class="danger">Hapus</button>
             </form>
         </div>
     </td>
 </tr>
-
 <?php endforeach; ?>
 <?php if (!$repo->semua()): ?>
     <tr><td colspan="9">Belum ada data.</td></tr><?php endif; ?>
-    </tbody></table></div><p><small>Data disimpan pada PHP Session (sementara), bukan MySQL.</small></p></section>
-    <p><a href="demo_konsep.php">Lihat demonstrasi constructor, destructor, dan overloading →</a></p>
+    </tbody></table></div><p><small>Data disimpan pada PHP Session (sementara) dengan menerapkan enkapsulasi ketat.</small></p></section>
     </main>
 </body>
 </html>
